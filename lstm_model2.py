@@ -2,22 +2,24 @@ from __future__ import print_function
 from utils import parse, sample
 from keras.models import Sequential
 from keras.layers import Dense, Activation
-from keras.layers import LSTM, Dropout
+from keras.layers import LSTM, Dropout, BatchNormalization
 from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 import numpy as np
 import random
 import sys
 import os
+
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
-# 0 for training, 1 for generating the next 50 words from a random point in the literature
-# 2 for generating from user input until end of sentence
-# 3 for generating from user input until end of paragraph
-MODE = 0
+# 0 for training from input.txt
+# 1 for generating the next 50 words from a random point in the literature
+# 2 for generating from user input (user.txt) until end of sentence
+# 3 for generating from user input (user.txt) until end of paragraph
+MODE = 3
 EPOCHS = 100
-USERINPUT = 'user_input.txt'
-WEIGHTS = 'lstm_model2.hdf5'
+USERINPUT = 'userinput.txt'
+WEIGHTS = 'lstm_model1.hdf5'
 
 def generate_text(sentence, model):
     if len(sentence) > maxlen:
@@ -43,6 +45,7 @@ def generate_text(sentence, model):
         sys.stdout.flush()
     return sentence
 
+
 with open('input.txt', 'r') as f:
     text = f.readlines()
     f.close()
@@ -62,7 +65,6 @@ for i in range(0, len(text_parsed) - maxlen, step):
     next_words.append(text_parsed[i + maxlen])
 print('# of sentence fragments:', len(sentences))   # Sentences is a list of lists
 print('# of words (with punctuation):', len(text_parsed))
-print('RAM of hot vectors:', (np.floor(len(sentences)-maxlen / step)+1)*maxlen*len(wordlist) / 1000000, 'MB')
 
 print(len(text_parsed), len(wordlist), len(sentences))
 
@@ -77,15 +79,13 @@ for i, sentence in enumerate(sentences):
 ## Building LSTM
 print('Build model...')
 model = Sequential()
-model.add(LSTM(256, return_sequences=True, input_shape=(maxlen, len(wordlist))))
+model.add(LSTM(128, input_shape=(maxlen, len(wordlist))))
 model.add(Dropout(0.2))
-model.add(LSTM(256, return_sequences=False))
-model.add(Dropout(0.2))
+model.add(BatchNormalization())
 model.add(Dense(len(wordlist)))
 model.add(Activation('softmax'))
 
 model.compile(loss='categorical_crossentropy', optimizer=Adam(0.001))
-
 if os.path.exists(WEIGHTS):
     model.load_weights(WEIGHTS)
 
@@ -93,7 +93,7 @@ if os.path.exists(WEIGHTS):
 if MODE == 0:
     for e in range(EPOCHS):
         print('\n')
-        print('Iteration ', e + 1, ' of ', EPOCHS)
+        print('Iteration ', e+1, ' of ', EPOCHS)
         model_checkpoint = ModelCheckpoint(
             filepath=WEIGHTS,
             monitor='loss',
@@ -110,7 +110,6 @@ if MODE == 0:
             for words in sentence:
                 sys.stdout.write(str(words) + ' ')
             print()
-
             for i in range(50):
                 x_pred = np.zeros((1, maxlen, len(wordlist)))
                 for t, char in enumerate(sentence):
