@@ -13,13 +13,14 @@ import os
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 # 0 for training from input.txt
-# 1 for generating the next 50 words from a random point in the literature
-# 2 for generating from user input (user.txt) until end of sentence
-# 3 for generating from user input (user.txt) until end of paragraph
-MODE = 3
+# 1 for generating from user input (userinput.txt) for the next 50 words
+# 2 for generating from user input (userinput.txt) until end of sentence
+# 3 for generating from user input (userinput.txt) until end of paragraph
+# if userinput.txt is not found, will use a random point in the literature as start point
+MODE = 1
 EPOCHS = 100
 USERINPUT = 'userinput.txt'
-WEIGHTS = 'lstm_model1.hdf5'
+WEIGHTS = 'weights/lstm_model2.hdf5'
 
 def generate_text(sentence, model):
     if len(sentence) > maxlen:
@@ -150,8 +151,8 @@ elif MODE == 2:
         print('Using literature \n')
         start_index = random.randint(0, len(text_parsed) - maxlen - 1)
         sentence = text_parsed[start_index: start_index + maxlen]
-    if sentence[-1] == '.':
-        sentence = text_parsed[start_index-1 : start_index + maxlen-1]
+        if sentence[-1] == '.':
+            sentence = text_parsed[start_index-1 : start_index + maxlen-1]
     while sentence[-1] != '.':
         sentence = generate_text(sentence, model)
 
@@ -167,7 +168,7 @@ elif MODE == 3:
         print('Using literature \n')
         start_index = random.randint(0, len(text_parsed) - maxlen - 1)
         sentence = text_parsed[start_index: start_index + maxlen]
-    if sentence[-1] == '\n':
-        sentence = text_parsed[start_index-1 : start_index + maxlen-1]
+        if sentence[-1] == '\n':
+            sentence = text_parsed[start_index-1 : start_index + maxlen-1]
     while sentence[-1] != '\n' and sentence[-2] != '\n':
         sentence = generate_text(sentence, model)

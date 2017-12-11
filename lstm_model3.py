@@ -12,19 +12,25 @@ import os
 
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
-# 0 for training, 1 for generating the next 50 words from a random point in the literature
-# 2 for generating from user input until end of sentence
-# 3 for generating from user input until end of paragraph
-MODE = 0
-EPOCHS = 500
-USERINPUT = 'user_input.txt'
-WEIGHTS = 'lstm_model3.hdf5'
+# 0 for training from input.txt
+# 1 for generating from user input (userinput.txt) for the next 50 words
+# 2 for generating from user input (userinput.txt) until end of sentence
+# 3 for generating from user input (userinput.txt) until end of paragraph
+# if userinput.txt is not found, will use a random point in the literature as start point
+MODE = 1
+EPOCHS = 100
+USERINPUT = 'userinput.txt'
+WEIGHTS = 'weights/lstm_model3.hdf5'
 
 def generate_text(sentence, model):
+    x_pred = np.zeros((1, maxlen, len(wordlist)))
     if len(sentence) > maxlen:
         sentence = sentence[-maxlen:]
+        for t, char in enumerate(sentence):
+            if char in wordlist:
+                x_pred[0, t, word_indices[char]] = 1.
     else:
-        x_pred = np.zeros((1, maxlen, len(wordlist)))
+        # x_pred = np.zeros((1, maxlen, len(wordlist)))
         if len(sentence) < maxlen:
             for t, char in enumerate(sentence):
                 if char in wordlist:
@@ -33,15 +39,15 @@ def generate_text(sentence, model):
             for t, char in enumerate(sentence):
                 if char in wordlist:
                     x_pred[0, t, word_indices[char]] = 1.
-        preds = model.predict(x_pred, verbose=0)[0]
+    preds = model.predict(x_pred, verbose=0)[0]
 
-        next_word = indices_word[np.argmax(preds)]
+    next_word = indices_word[np.argmax(preds)]
 
-        sentence = sentence[1:]
-        sentence.append(next_word)
+    sentence = sentence[1:]
+    sentence.append(next_word)
 
-        sys.stdout.write(str(next_word) + ' ')
-        sys.stdout.flush()
+    sys.stdout.write(str(next_word) + ' ')
+    sys.stdout.flush()
     return sentence
 
 with open('input.txt', 'r') as f:
@@ -52,7 +58,6 @@ with open('input.txt', 'r') as f:
 wordlist, text_parsed = parse(text, punc = 1)
 word_indices = dict((c, i) for i, c in enumerate(wordlist))
 indices_word = dict((i, c) for i, c in enumerate(wordlist))
-
 # Windowing
 maxlen = 10
 step = 2
@@ -153,8 +158,8 @@ elif MODE == 2:
         print('Using literature \n')
         start_index = random.randint(0, len(text_parsed) - maxlen - 1)
         sentence = text_parsed[start_index: start_index + maxlen]
-    if sentence[-1] == '.':
-        sentence = text_parsed[start_index-1 : start_index + maxlen-1]
+        if sentence[-1] == '.':
+            sentence = text_parsed[start_index-1 : start_index + maxlen-1]
     while sentence[-1] != '.':
         sentence = generate_text(sentence, model)
 
@@ -170,7 +175,7 @@ elif MODE == 3:
         print('Using literature \n')
         start_index = random.randint(0, len(text_parsed) - maxlen - 1)
         sentence = text_parsed[start_index: start_index + maxlen]
-    if sentence[-1] == '\n':
-        sentence = text_parsed[start_index-1 : start_index + maxlen-1]
+        if sentence[-1] == '\n':
+            sentence = text_parsed[start_index-1 : start_index + maxlen-1]
     while sentence[-1] != '\n' and sentence[-2] != '\n':
         sentence = generate_text(sentence, model)
